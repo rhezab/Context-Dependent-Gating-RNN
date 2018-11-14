@@ -58,7 +58,7 @@ par = {
     # Cost values
     'spike_cost'            : 1e-7,
     'weight_cost'           : 0.,
-    'entropy_cost'          : 0.0001,
+    'entropy_cost'          : 0.01,
     'val_cost'              : 0.01,
 
     # Synaptic plasticity specs

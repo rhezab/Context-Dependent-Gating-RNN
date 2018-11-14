@@ -263,15 +263,19 @@ class Model:
             action_static    = tf.stop_gradient(self.action)
             advantage_static = tf.stop_gradient(advantage)
             mask_static      = tf.stop_gradient(self.mask)
+            pred_val_static  = tf.stop_gradient(pred_val)
+
+            # Multiply masks together
+            full_mask        = mask_static*self.time_mask
 
             # Policy loss
-            self.pol_loss = -tf.reduce_mean(advantage_static*mask_static*self.time_mask*action_static*tf.log(epsilon+self.pol_out))
+            self.pol_loss = -tf.reduce_mean(full_mask*advantage_static*action_static*tf.log(epsilon+self.pol_out))
 
             # Value loss
-            self.val_loss = 0.5*par['val_cost']*tf.reduce_mean(mask_static*self.time_mask*tf.square(val_out[:-1,:,:]-tf.stop_gradient(pred_val)))
+            self.val_loss = 0.5*par['val_cost']*tf.reduce_mean(full_mask*tf.square(val_out[:-1,:,:]-pred_val_static))
 
             # Entropy loss
-            self.entropy_loss = -par['entropy_cost']*tf.reduce_mean(tf.reduce_sum(mask_static*self.time_mask*self.pol_out*tf.log(epsilon+self.pol_out), axis=1))
+            self.entropy_loss = -par['entropy_cost']*tf.reduce_mean(tf.reduce_sum(full_mask*self.pol_out*tf.log(epsilon+self.pol_out), axis=2))
 
             # Collect RL losses
             RL_loss = self.pol_loss + self.val_loss - self.entropy_loss
