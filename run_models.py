@@ -29,7 +29,7 @@ def LSTM_RL_XdG():
             update_parameters({
                 'omega_c': omega_c, 'gating_type': 'XdG', 'architecture': 'LSTM', \
                 'training_method': 'RL', 'n_train_batches': 50000, 'learning_rate': 5e-4, \
-                'val_cost': 0.01, 'entropy_cost': 1e-4, 'omega_xi': 0.01
+                'val_cost': 0.01, 'entropy_cost': 0.001, 'omega_xi': 0.01
             })
             save_fn = 'LSTM_RL_XdG_xi01_sgd_omega{}_v{}.pkl'.format(str(100*omega_c).zfill(3), j)
             print('Running {}'.format(save_fn))
