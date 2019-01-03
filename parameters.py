@@ -94,13 +94,13 @@ par = {
 
 
 def update_parameters(updates):
-    """
-    Takes a list of strings and values for updating parameters in the parameter dictionary
-    Example: updates = [(key, val), (key, val)]
-    """
+    """ Updates parameters based on a provided
+        dictionary, then updates dependencies """
+    
     for (key, val) in updates.items():
         par[key] = val
-        print('Updating : ', key, ' -> ', val)
+        print('Updating: {:<24} --> {}'.format(key, val))
+        
     update_dependencies()
 
 
