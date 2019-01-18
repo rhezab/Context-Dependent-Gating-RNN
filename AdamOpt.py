@@ -86,6 +86,9 @@ class AdamOpt:
             elif 'W_out' in var.op.name:
                 print('Applied W_out mask.')
                 delta_grad *= par['W_out_mask']
+            elif 'W_lin' in var.op.name:
+                print('Applied W_lin mask.')
+                delta_grad *= par['W_lin_mask']
 
             self.update_var_op.append(tf.assign(self.delta_grads[var.op.name], delta_grad))
             self.update_var_op.append(tf.assign_add(var, delta_grad))

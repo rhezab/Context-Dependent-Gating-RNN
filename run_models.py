@@ -30,8 +30,28 @@ def LSTM_RL_XdG():
     print('Running {}'.format(save_fn))
     try_model(save_fn)
 
+def LSTM_SL_XdG_pLIN():
+
+    update_parameters({
+        'task':'gotask', 'n_tasks':1, 'omega_c': 0.1, 'gating_type': 'XdG', \
+        'architecture': 'LSTM', 'training_method': 'SL', 'n_train_batches': 5000, \
+        'learning_rate': 1e-3,  'omega_xi': 0.01})
+    save_fn = 'LSTM_SL_XdG_pLIN.pkl'
+    print('Running {}'.format(save_fn))
+    try_model(save_fn)
+
+def LSTM_SL_Vanilla_pLIN():
+
+    update_parameters({
+        'task':'gotask', 'n_tasks':1, 'omega_c': 0., 'gating_type': None, \
+        'architecture': 'LSTM', 'training_method': 'SL', 'n_train_batches': 50000, \
+        'learning_rate': 1e-3,  'omega_xi': 0.01, 'num_motion_dirs':24})
+    save_fn = 'LSTM_SL_Vanilla_pLIN_24dir.pkl'
+    print('Running {}'.format(save_fn))
+    try_model(save_fn)
+
 
 
 if __name__ == '__main__':
     # By default, do small LSTM RL XdG sweep
-    LSTM_RL_XdG()
+    LSTM_SL_Vanilla_pLIN()

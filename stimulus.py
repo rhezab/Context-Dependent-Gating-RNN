@@ -100,6 +100,11 @@ class MultiStimulus:
                 [self.task_dm_dly, 'ctx_dm2_dly'],
                 [self.task_dm_dly, 'multsen_dm_dly']
             ]
+
+        elif par['task'] == 'gotask':
+            self.task_types = [
+                [self.task_go, 'go', 0]
+            ]
         else:
             raise Exception('Multistimulus task type \'{}\' not yet implemented.'.format(par['task']))
 
