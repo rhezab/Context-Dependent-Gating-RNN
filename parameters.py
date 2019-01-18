@@ -22,12 +22,13 @@ par = {
 	'var_delay'             : False,
 	'training_method'       : 'RL',         # 'SL', 'RL'
 	'architecture'          : 'BIO',        # 'BIO', 'LSTM'
+	'recon_target'			: 'hidden',		# 'input' or 'hidden'
 
 	# Network shape
 	'num_motion_tuned'      : 64,
 	'num_fix_tuned'         : 4,
 	'num_rule_tuned'        : 0,
-	'n_hidden'              : 256,
+	'n_hidden'              : 250,
 	'n_linear'              : 128,
 	'n_val'                 : 1,
 	'include_rule_signal'   : True,
@@ -172,7 +173,10 @@ def update_dependencies():
 	par['W_in_init'] = c*np.float32(np.random.gamma(shape=0.25, scale=1.0, size = [par['n_input'], par['n_hidden']]))
 	par['W_lin_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_hidden'], par['n_linear']]))
 	par['W_out_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_output']]))
-	par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_input'], par['num_time_steps']]))
+	if par['recon_target'] == 'input':
+		par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_input'], par['num_time_steps']]))
+	elif par['recon_target'] == 'hidden':
+		par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_hidden']]))
 
 	if par['EI']:
 		par['W_rnn_init'] = c*np.float32(np.random.gamma(shape=0.25, scale=1.0, size = [par['n_hidden'], par['n_hidden']]))
@@ -186,7 +190,10 @@ def update_dependencies():
 	par['b_rnn_init'] = np.zeros((1,par['n_hidden']), dtype = np.float32)
 	par['b_lin_init'] = np.zeros((1,par['n_linear']), dtype=np.float32)
 	par['b_out_init'] = np.zeros((1,par['n_output']), dtype=np.float32)
-	par['b_rec_init'] = np.zeros((1,par['n_input'], par['num_time_steps']), dtype=np.float32)
+	if par['recon_target'] == 'input':
+		par['b_rec_init'] = np.zeros((1,par['n_input'], par['num_time_steps']), dtype=np.float32)
+	elif par['recon_target'] == 'hidden':
+		par['b_rec_init'] = np.zeros((1,par['n_hidden']), dtype=np.float32)
 
 	# Specify masks
 	par['W_lin_mask'] = np.ones((par['n_hidden'], par['n_linear']), dtype=np.float32)

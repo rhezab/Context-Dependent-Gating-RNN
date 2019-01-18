@@ -258,12 +258,15 @@ class Model:
 				labels=target, dim=1) for y, target, mask in zip(self.output, self.target_data, self.time_mask)])
 	
 			# Reconstruction loss (cross entropy)
-			input_data = tf.stack(self.input_data, axis=0)
-			self.rec_loss = 0.
-			for t in range(par['num_time_steps']):
-				rec_target = tf.concat([tf.zeros([par['num_time_steps']-(t+1),par['batch_size'],par['n_input']]), input_data[:t+1,:,:]], axis=0)
-				self.rec_loss += tf.reduce_mean(tf.square(self.recon[t] - tf.transpose(rec_target,[1,2,0])))
-			self.rec_loss /= par['num_time_steps']
+			if par['recon_target'] == 'input':
+				input_data = tf.stack(self.input_data, axis=0)
+				self.rec_loss = 0.
+				for t in range(par['num_time_steps']):
+					rec_target = tf.concat([tf.zeros([par['num_time_steps']-(t+1),par['batch_size'],par['n_input']]), input_data[:t+1,:,:]], axis=0)
+					self.rec_loss += tf.reduce_mean(tf.square(self.recon[t] - tf.transpose(rec_target,[1,2,0])))
+				self.rec_loss /= par['num_time_steps']
+			elif par['recon_target'] == 'hidden':
+				self.rec_loss = tf.reduce_mean(tf.square(tf.stack(self.h) - tf.stack(self.recon)))
 
 			sup_loss = self.pol_loss + self.rec_loss
 
@@ -493,40 +496,71 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 
 					# Assemble feed dict and run model
 					feed_dict = {x:stim_in, g:par['gating'][task_prime]}
-					output, h = sess.run([model.output, model.h], feed_dict=feed_dict)
+					output, h, recon = sess.run([model.output, model.h, model.recon], feed_dict=feed_dict)
 
 					# Record results
 					acc = get_perf(y_hat, output, mk)
 					accuracy_grid[task,task_prime] += acc/num_reps
 
-				output = np.stack(output, axis=0)
-				trials = 5
-				fig, ax = plt.subplots(6,trials,figsize=(12,16))
-				for t in range(trials):
-					ax[0,t].imshow(stim_in[:,t,:].T, aspect='auto')
-					ax[1,t].imshow(recon[25][t,:,:], aspect='auto', clim=[0,recon[25][t,:,:].max()])
-					ax[2,t].imshow(recon[50][t,:,:], aspect='auto', clim=[0,recon[50][t,:,:].max()])
-					ax[3,t].imshow(recon[-1][t,:,:], aspect='auto', clim=[0,recon[-1][t,:,:].max()])
-					ax[4,t].imshow(y_hat[:,t,:].T, aspect='auto')
-					ax[5,t].imshow(output[:,t,:].T, aspect='auto')
+				if par['recon_target'] == 'input':
+					output = np.stack(output, axis=0)
+					trials = 5
+					fig, ax = plt.subplots(6,trials,figsize=(12,16))
+					for t in range(trials):
+						ax[0,t].imshow(stim_in[:,t,:].T, aspect='auto')
+						ax[1,t].imshow(recon[25][t,:,:], aspect='auto', clim=[0,recon[25][t,:,:].max()])
+						ax[2,t].imshow(recon[50][t,:,:], aspect='auto', clim=[0,recon[50][t,:,:].max()])
+						ax[3,t].imshow(recon[-1][t,:,:], aspect='auto', clim=[0,recon[-1][t,:,:].max()])
+						ax[4,t].imshow(y_hat[:,t,:].T, aspect='auto')
+						ax[5,t].imshow(output[:,t,:].T, aspect='auto')
 
-					ax[0,t].set_title('Trial {}'.format(t))
-					for p in range(6):
-						ax[p,t].set_xticks([])
-						ax[p,t].set_yticks([])
+						ax[0,t].set_title('Trial {}'.format(t))
+						for p in range(6):
+							ax[p,t].set_xticks([])
+							ax[p,t].set_yticks([])
 
-				ax[0,0].set_ylabel('Stim In')
-				ax[1,0].set_ylabel('Stim Rec (t=T/4)')
-				ax[2,0].set_ylabel('Stim Rec (t=T/2)')
-				ax[3,0].set_ylabel('Stim Rec (t=T)')
-				ax[4,0].set_ylabel('Target')
-				ax[5,0].set_ylabel('Output')
-				ax[5,0].set_xlabel('Time')
+					ax[0,0].set_ylabel('Stim In')
+					ax[1,0].set_ylabel('Stim Rec (t=T/4)')
+					ax[2,0].set_ylabel('Stim Rec (t=T/2)')
+					ax[3,0].set_ylabel('Stim Rec (t=T)')
+					ax[4,0].set_ylabel('Target')
+					ax[5,0].set_ylabel('Output')
+					ax[5,0].set_xlabel('Time')
 
-				fig.suptitle('Task {} : Testing {}'.format(task, task_prime))
-				plt.savefig('./savedir/task{}_test{}_outputs.png'.format(task, task_prime), bbox_inches='tight')
-				plt.clf()
-				plt.close()
+					fig.suptitle('Task {} : Testing {}'.format(task, task_prime))
+					plt.savefig('./savedir/{}_task{}_test{}_input_recon_outputs.png'.format(save_fn, task, task_prime), bbox_inches='tight')
+					plt.clf()
+					plt.close()
+
+				elif par['recon_target'] == 'hidden':
+					output = np.stack(output, axis=0)
+					hidden = np.stack(h, axis=0)
+					recon  = np.stack(recon, axis=0)
+					trials = 5
+					fig, ax = plt.subplots(5,trials,figsize=(12,12))
+					for t in range(trials):
+						ax[0,t].imshow(stim_in[:,t,:].T, aspect='auto')
+						ax[1,t].imshow(y_hat[:,t,:].T, aspect='auto')
+						ax[2,t].imshow(output[:,t,:].T, aspect='auto')
+						ax[3,t].imshow(hidden[:,t,:].T, aspect='auto')
+						ax[4,t].imshow(recon[:,t,:].T, aspect='auto')
+
+						ax[0,t].set_title('Trial {}'.format(t))
+						for p in range(5):
+							ax[p,t].set_xticks([])
+							ax[p,t].set_yticks([])
+
+					ax[0,0].set_ylabel('Stim In')
+					ax[1,0].set_ylabel('Target')
+					ax[2,0].set_ylabel('Output')
+					ax[3,0].set_ylabel('Hidden State')
+					ax[4,0].set_ylabel('Hidden Recon')
+					ax[4,0].set_xlabel('Time')
+
+					fig.suptitle('Task {} : Testing {}'.format(task, task_prime))
+					plt.savefig('./savedir/{}_task{}_test{}_hidden_recon_outputs.png'.format(save_fn, task, task_prime), bbox_inches='tight')
+					plt.clf()
+					plt.close()
 
 				# Record network activity
 				task_activity_list.append(h)
@@ -557,7 +591,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 		if par['save_analysis']:
 			weights = sess.run(model.var_dict)
 			save_results = {'task': task, 'accuracy_grid': accuracy_grid, 'par': par, 'activity': full_activity_list, 'weights':weights}
-			pickle.dump(save_results, open(par['save_dir'] + save_fn, 'wb'))
+			pickle.dump(save_results, open(par['save_dir'] + save_fn + '.pkl', 'wb'))
 
 	print('\nModel execution complete. (Supervised)')
 
@@ -669,7 +703,7 @@ def reinforcement_learning(save_fn='test.pkl', gpu_id=None):
 			print(reward_matrix[task,:])
 
 			results = {'reward_matrix': reward_matrix, 'par': par, 'activity': full_activity_list}
-			pickle.dump(results, open(par['save_dir'] + save_fn, 'wb') )
+			pickle.dump(results, open(par['save_dir'] + save_fn + '.pkl', 'wb') )
 			print('Analysis results saved in', save_fn)
 			print('')
 

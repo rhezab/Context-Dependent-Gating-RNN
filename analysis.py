@@ -24,7 +24,10 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 # Load saved data
-data = pickle.load(open('./savedir/LSTM_SL_Vanilla_pLIN.pkl', 'rb'))
+#data = pickle.load(open('./savedir/LSTM_SL_Vanilla_pLIN.pkl', 'rb'))
+save_fn = 'LSTM_SL_Vanilla_pLIN_24dir'
+#save_fn = 'LSTM_SL_Vanilla_pLIN_hid-rec'
+data = pickle.load(open('./savedir/{}.pkl'.format(save_fn), 'rb'))
 
 data['par'].update({'batch_size':1024})
 update_parameters(data['par'], verbose=False)
@@ -54,7 +57,7 @@ plc_d = tf.placeholder_with_default(0.5, [], 'lin_dropout')
 plc_l = tf.placeholder_with_default(np.ones([par['batch_size'],par['n_linear']]).astype(np.float32), [par['batch_size'],par['n_linear']], 'lesion')
 
 # Set up stimulus and accuracy recording
-stim = stimulus.MultiStimulus()
+stim = stimulus.MultiStimulus(analysis=True)
 
 # Start Tensorflow session
 with tf.Session() as sess:
@@ -83,50 +86,52 @@ with tf.Session() as sess:
 
 		print('Task {} | Loss: {:5.3f} | Acc: {:5.3f} |'.format(task, loss, acc))
 
-		# Look at patterns of activity during certain types of trials
-		print('Rendering directional activity patterns.')
-		fig, ax = plt.subplots(2,4,figsize=(8,4))
-		fields = []
-		for d in range(par['num_motion_dirs']):
-			dir_inds = np.where(y_hat[-1,:,d] == 1.)[0]
-			neural_field = np.mean(linear[:,dir_inds,:], axis=1)
-			
-			idx = d%2
-			idy = d//2
-			fields.append(neural_field.T)
-			ax[idx,idy].imshow(neural_field.T, aspect='auto')
-			ax[idx,idy].set_title('Direction {}'.format(d))
-			ax[idx,idy].set_xticks([])
-			ax[idx,idy].set_yticks([])
+		if False:
 
-		ax[0,0].set_ylabel('Neurons')
-		ax[1,0].set_ylabel('Neurons')
-		ax[1,0].set_xlabel('Time')
+			# Look at patterns of activity during certain types of trials
+			print('Rendering directional activity patterns.')
+			fig, ax = plt.subplots(2,4,figsize=(8,4))
+			fields = []
+			for d in range(par['num_motion_dirs']):
+				dir_inds = np.where(y_hat[-1,:,d] == 1.)[0]
+				neural_field = np.mean(linear[:,dir_inds,:], axis=1)
+				
+				idx = d%2
+				idy = d//2
+				fields.append(neural_field.T)
+				ax[idx,idy].imshow(neural_field.T, aspect='auto')
+				ax[idx,idy].set_title('Direction {}'.format(d))
+				ax[idx,idy].set_xticks([])
+				ax[idx,idy].set_yticks([])
 
-		fig.suptitle('Task {} : Directional Activity Patterns'.format(task))
-		plt.savefig('./analysis/task{}_all_neural_activity.png'.format(task), bbox_inches='tight')
-		plt.clf()
-		plt.close()
+			ax[0,0].set_ylabel('Neurons')
+			ax[1,0].set_ylabel('Neurons')
+			ax[1,0].set_xlabel('Time')
 
-		fig, ax = plt.subplots(2,4,figsize=(8,4))
-		field_mean = np.mean(fields, axis=0)
-		for d in range(par['num_motion_dirs']):
-			idx = d%2
-			idy = d//2
+			fig.suptitle('Task {} : Directional Activity Patterns'.format(task))
+			plt.savefig('./analysis/{}_task{}_all_neural_activity.png'.format(save_fn, task), bbox_inches='tight')
+			plt.clf()
+			plt.close()
 
-			ax[idx,idy].imshow(field_mean - fields[d], aspect='auto')
-			ax[idx,idy].set_title('Direction {}'.format(d))
-			ax[idx,idy].set_xticks([])
-			ax[idx,idy].set_yticks([])
+			fig, ax = plt.subplots(2,4,figsize=(8,4))
+			field_mean = np.mean(fields, axis=0)
+			for d in range(par['num_motion_dirs']):
+				idx = d%2
+				idy = d//2
 
-		ax[0,0].set_ylabel('Neurons')
-		ax[1,0].set_ylabel('Neurons')
-		ax[1,0].set_xlabel('Time')
+				ax[idx,idy].imshow(field_mean - fields[d], aspect='auto')
+				ax[idx,idy].set_title('Direction {}'.format(d))
+				ax[idx,idy].set_xticks([])
+				ax[idx,idy].set_yticks([])
 
-		fig.suptitle('Task {} : Difference from Mean of Directional Activity Patterns'.format(task))
-		plt.savefig('./analysis/task{}_all_neural_activity_var_from_mean.png'.format(task), bbox_inches='tight')
-		plt.clf()
-		plt.close()
+			ax[0,0].set_ylabel('Neurons')
+			ax[1,0].set_ylabel('Neurons')
+			ax[1,0].set_xlabel('Time')
+
+			fig.suptitle('Task {} : Difference from Mean of Directional Activity Patterns'.format(task))
+			plt.savefig('./analysis/{}_task{}_all_neural_activity_var_from_mean.png'.format(save_fn, task), bbox_inches='tight')
+			plt.clf()
+			plt.close()
 
 
 		# Look at average activity for EACH NEURON at EACH TIME STEP
@@ -165,38 +170,39 @@ with tf.Session() as sess:
 			ax[3,0].set_xlabel('Time')
 
 			fig.suptitle('Task {} : Neuron Directional Tuning'.format(task))
-			plt.savefig('./analysis/task{}_neuron{}-{}_tuning.png'.format(task, neurons.min(), neurons.max()), bbox_inches='tight')
+			plt.savefig('./analysis/{}_task{}_neuron{}-{}_tuning.png'.format(save_fn, task, neurons.min(), neurons.max()), bbox_inches='tight')
 			plt.clf()
 			plt.close()
 
-		print('Running linear neuron double lesioning against reconstruction.')
-		lesioned_losses = np.zeros([par['n_linear'], par['n_linear']])
-		for n in range(par['n_linear']):
-			for m in range(n,par['n_linear']):
-				print(n, m)
+		if False:
+			print('Running linear neuron double lesioning against reconstruction.')
+			lesioned_losses = np.zeros([par['n_linear'], par['n_linear']])
+			for n in range(par['n_linear']):
+				for m in range(n,par['n_linear']):
+					print(str(n).ljust(3) + '-' + str(m).ljust(3), end='\r')
 
-				lmask = np.ones([par['batch_size'],par['n_linear']]).astype(np.float32)
-				lmask[:,n] = 0.
-				lmask[:,m] = 0.
+					lmask = np.ones([par['batch_size'],par['n_linear']]).astype(np.float32)
+					lmask[:,n] = 0.
+					lmask[:,m] = 0.
 
-				feed_dict = {plc_x:stim_in, plc_g:par['gating'][task], plc_m:mk, plc_d:1., plc_l:lmask}
-				recon_loss, = sess.run([model.rec_loss], feed_dict=feed_dict)
-				lesioned_losses[n,m] = recon_loss/base_rec_loss
-				lesioned_losses[m,n] = recon_loss/base_rec_loss
+					feed_dict = {plc_x:stim_in, plc_g:par['gating'][task], plc_m:mk, plc_d:1., plc_l:lmask}
+					recon_loss, = sess.run([model.rec_loss], feed_dict=feed_dict)
+					lesioned_losses[n,m] = recon_loss/base_rec_loss
+					lesioned_losses[m,n] = recon_loss/base_rec_loss
 
-		tl = lambda i : str(i) if i in np.arange(0,par['n_linear'],8) else ''
-		tick_labels = [tl(n) for n in range(par['n_linear'])]
+			tl = lambda i : str(i) if i in np.arange(0,par['n_linear'],8) else ''
+			tick_labels = [tl(n) for n in range(par['n_linear'])]
 
-		fig, ax = plt.subplots(1,1,figsize=(8,8))
-		ax.imshow(lesioned_losses, aspect='auto', clim=(0, lesioned_losses.max()))
-		ax.set_xlabel('Lesioned Neuron 1')
-		ax.set_ylabel('Lesioned Neuron 2')
-		ax.set_xticks(np.arange(0,par['n_linear'],8))
-		ax.set_yticks(np.arange(0,par['n_linear'],8))
-		ax.set_title('Task {} : Percentage Reconstruction Loss After Lesioning Linear Units'.format(task))
-		plt.savefig('./analysis/task{}_linear_double-lesion.png'.format(task), bbox_inches='tight')
-		plt.clf()
-		plt.close()
+			fig, ax = plt.subplots(1,1,figsize=(8,8))
+			ax.imshow(lesioned_losses, aspect='auto', clim=(0, lesioned_losses.max()))
+			ax.set_xlabel('Lesioned Neuron 1')
+			ax.set_ylabel('Lesioned Neuron 2')
+			ax.set_xticks(np.arange(0,par['n_linear'],8))
+			ax.set_yticks(np.arange(0,par['n_linear'],8))
+			ax.set_title('Task {} : Percentage Reconstruction Loss After Lesioning Linear Units'.format(task))
+			plt.savefig('./analysis/{}_task{}_linear_double-lesion.png'.format(save_fn, task), bbox_inches='tight')
+			plt.clf()
+			plt.close()
 
 
 
