@@ -6,7 +6,7 @@ print('Using \'Multistim\' stimulus file.')
 
 class MultiStimulus:
 
-    def __init__(self):
+    def __init__(self, analysis=False):
 
         # Shape configuration
         self.input_shape    = [par['num_time_steps'], par['batch_size'],par['n_input'] ]
@@ -26,19 +26,21 @@ class MultiStimulus:
 
         self.fix_time = 400
 
-        # Go task stuff
-        self.go_delay = np.array([200, 400, 800])//par['dt']
-
-        # DM task stuff
+        # Task configuration
         self.dm_c_set = np.array([-0.4, -0.2, -0.1, 0.1, 0.2, 0.4])
-        self.dm_stim_lengths = np.array([200,400,800])//par['dt']
-
-        # DM Dly task stuff
         self.dm_dly_c_set = np.array([-0.4, -0.2, -0.1, 0.1, 0.2, 0.4])
-        self.dm_dly_delay = np.array([200, 400, 800])//par['dt']
-
-        # Matching task stuff
-        self.match_delay = np.array([200, 400, 800])//par['dt']
+        
+        # Timings
+        if not analysis:
+            self.go_delay = np.array([200, 400, 800])//par['dt']
+            self.dm_stim_lengths = np.array([200,400,800])//par['dt']
+            self.dm_dly_delay = np.array([200, 400, 800])//par['dt']
+            self.match_delay = np.array([200, 400, 800])//par['dt']
+        else:
+            self.go_delay = np.array([400])//par['dt']
+            self.dm_stim_lengths = np.array([400])//par['dt']
+            self.dm_dly_delay = np.array([400])//par['dt']
+            self.match_delay = np.array([400])//par['dt']
 
         # Initialize task interface
         self.get_tasks()
