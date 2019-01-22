@@ -24,10 +24,9 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 
 # Load saved data
-#data = pickle.load(open('./savedir/LSTM_SL_Vanilla_pLIN.pkl', 'rb'))
-save_fn = 'LSTM_SL_Vanilla_pLIN_24dir'
-#save_fn = 'LSTM_SL_Vanilla_pLIN_hid-rec'
+save_fn = 'LSTM_SL_pLIN_relu_no_bias_linloss_hc_small_inp_dms'
 data = pickle.load(open('./savedir/{}.pkl'.format(save_fn), 'rb'))
+print('\nAnalyzing ./savedir/{}.pkl...'.format(save_fn))
 
 data['par'].update({'batch_size':1024})
 update_parameters(data['par'], verbose=False)
@@ -163,7 +162,7 @@ with tf.Session() as sess:
 				ax[idx,idy].set_title('Neuron {}'.format(n))
 				ax[idx,idy].set_xticks([])
 				ax[idx,idy].set_yticks([])
-				ax[idx,idy].imshow(responses, aspect='auto')
+				ax[idx,idy].imshow(responses, clim=[linear.min(), linear.max()], aspect='auto')
 
 			for i in range(4):
 				ax[i,0].set_ylabel('Directions')

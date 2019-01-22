@@ -176,7 +176,7 @@ def update_dependencies():
 	if par['recon_target'] == 'input':
 		par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_input'], par['num_time_steps']]))
 	elif par['recon_target'] == 'hidden':
-		par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_hidden']]))
+		par['W_rec_init'] = np.float32(np.random.uniform(-c, c, size=[par['n_linear'], par['n_hidden'], 2]))
 
 	if par['EI']:
 		par['W_rnn_init'] = c*np.float32(np.random.gamma(shape=0.25, scale=1.0, size = [par['n_hidden'], par['n_hidden']]))
@@ -193,7 +193,7 @@ def update_dependencies():
 	if par['recon_target'] == 'input':
 		par['b_rec_init'] = np.zeros((1,par['n_input'], par['num_time_steps']), dtype=np.float32)
 	elif par['recon_target'] == 'hidden':
-		par['b_rec_init'] = np.zeros((1,par['n_hidden']), dtype=np.float32)
+		par['b_rec_init'] = np.zeros((1,par['n_hidden'], 2), dtype=np.float32)
 
 	# Specify masks
 	par['W_lin_mask'] = np.ones((par['n_hidden'], par['n_linear']), dtype=np.float32)

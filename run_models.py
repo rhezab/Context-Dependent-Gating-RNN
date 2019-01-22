@@ -40,13 +40,19 @@ def LSTM_SL_XdG_pLIN():
     print('Running {}'.format(save_fn))
     try_model(save_fn)
 
+
+
+# With ReLu
+
+
 def LSTM_SL_Vanilla_pLIN():
 
     update_parameters({
         'task':'gotask', 'n_tasks':1, 'omega_c': 0., 'gating_type': None, \
-        'architecture': 'LSTM', 'training_method': 'SL', 'n_train_batches': 5000, \
-        'learning_rate': 1e-3,  'omega_xi': 0.01, 'num_motion_dirs':24, 'recon_target':'input'})
-    save_fn = 'LSTM_SL_Vanilla_pLIN_24dir'
+        'architecture': 'LSTM', 'training_method': 'SL', 'n_train_batches': 50000, \
+        'learning_rate': 1e-3,  'omega_xi': 0.01, 'num_motion_dirs':8, 'recon_target':'hidden', \
+        'n_linear': 64})
+    save_fn = 'LSTM_SL_pLIN_relu_no_bias_linloss_hc_small_hid'
     print('Running {}'.format(save_fn))
     try_model(save_fn)
 

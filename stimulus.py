@@ -424,9 +424,9 @@ class MultiStimulus:
         stim2_int = np.round(par['num_motion_dirs']*stim2/(2*np.pi))
 
         if variant in ['dms', 'dmc']:
-            resp = np.where(match, stim1_int, -1)
+            resp = np.where(match, 4, 0)#stim1_int, -1)
         elif variant in ['dnms', 'dnmc']:
-            resp = np.where(match, -1, stim2_int)
+            resp = np.where(match, 0, 4)#-1, stim2_int)
         else:
             raise Exception('Bad variant.')
 

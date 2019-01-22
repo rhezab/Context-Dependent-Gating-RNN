@@ -101,6 +101,7 @@ class Model:
 
 		# Initialize state records
 		self.h      = []
+		self.c 		= []
 		#self.syn_x  = []
 		#self.syn_u  = []
 
@@ -123,6 +124,7 @@ class Model:
 
 			# Record hidden state
 			self.h.append(h)
+			self.c.append(c)
 			#self.syn_x.append(syn_x)
 			#self.syn_u.append(syn_u)
 
@@ -130,13 +132,13 @@ class Model:
 				# Compute outputs for loss
 				#y = h @ self.var_dict['W_out'] + self.var_dict['b_out']
 
-				lin = h @ self.var_dict['W_lin'] + self.var_dict['b_lin']
+				lin = tf.nn.relu(h @ self.var_dict['W_lin'] + 0.*self.var_dict['b_lin'])
 				lin = self.lesion_mask*tf.nn.dropout(lin, self.lin_dropout)
 
 				self.lin.append(lin)
 
 				y = lin @ self.var_dict['W_out'] + self.var_dict['b_out']
-				rec = tf.tensordot(lin, self.var_dict['W_rec'], [[1],[0]]) + self.var_dict['b_rec']
+				rec = tf.nn.relu(tf.tensordot(lin, self.var_dict['W_rec'], [[1],[0]]) + 0.*self.var_dict['b_rec'])
 
 				# Record supervised outputs
 				self.output.append(y)
@@ -257,18 +259,35 @@ class Model:
 			self.pol_loss = tf.reduce_mean([mask*tf.nn.softmax_cross_entropy_with_logits_v2(logits=y, \
 				labels=target, dim=1) for y, target, mask in zip(self.output, self.target_data, self.time_mask)])
 	
-			# Reconstruction loss (cross entropy)
+			# Reconstruction loss
 			if par['recon_target'] == 'input':
 				input_data = tf.stack(self.input_data, axis=0)
+
+				self.rec_target = input_data
+				self.rec_output = self.recon
+
 				self.rec_loss = 0.
 				for t in range(par['num_time_steps']):
 					rec_target = tf.concat([tf.zeros([par['num_time_steps']-(t+1),par['batch_size'],par['n_input']]), input_data[:t+1,:,:]], axis=0)
 					self.rec_loss += tf.reduce_mean(tf.square(self.recon[t] - tf.transpose(rec_target,[1,2,0])))
 				self.rec_loss /= par['num_time_steps']
-			elif par['recon_target'] == 'hidden':
-				self.rec_loss = tf.reduce_mean(tf.square(tf.stack(self.h) - tf.stack(self.recon)))
 
-			sup_loss = self.pol_loss + self.rec_loss
+			elif par['recon_target'] == 'hidden':
+
+				hstack = tf.stack(self.h, axis=0)
+				cstack = tf.stack(self.c, axis=0)
+				rstack = tf.stack(self.recon, axis=0)
+
+				self.rec_target = tf.concat((hstack, cstack), axis=-1)
+				self.rec_output = tf.concat((rstack[...,0], rstack[...,1]), axis=-1)
+
+				self.rec_loss = tf.reduce_mean(tf.square(tf.stack((hstack, cstack), axis=-1) - rstack))
+
+			# Linear activity loss
+			self.lin_loss = 1e-6*tf.reduce_mean(tf.stack(self.lin, axis=0))
+
+
+			sup_loss = self.pol_loss + self.rec_loss + self.lin_loss
 
 		elif par['training_method'] == 'RL':
 			sup_loss = tf.constant(0.)
@@ -475,9 +494,9 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 
 				# Run the model using one of the available stabilization methods
 				if par['stabilization'] == 'pathint':
-					_, _, loss, AL, spike_loss, recon_loss, output, recon = sess.run([model.train_op, \
+					_, _, loss, AL, spike_loss, recon_loss, output = sess.run([model.train_op, \
 						model.update_small_omega, model.pol_loss, model.aux_loss, \
-						model.spike_loss, model.rec_loss, model.output, model.recon], feed_dict=feed_dict)
+						model.spike_loss, model.rec_loss, model.output], feed_dict=feed_dict)
 
 				# Display network performance
 				if i%500 == 0:
@@ -496,7 +515,7 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 
 					# Assemble feed dict and run model
 					feed_dict = {x:stim_in, g:par['gating'][task_prime]}
-					output, h, recon = sess.run([model.output, model.h, model.recon], feed_dict=feed_dict)
+					output, h, recon_target, recon_output = sess.run([model.output, model.h, model.rec_target, model.rec_output], feed_dict=feed_dict)
 
 					# Record results
 					acc = get_perf(y_hat, output, mk)
@@ -508,9 +527,9 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 					fig, ax = plt.subplots(6,trials,figsize=(12,16))
 					for t in range(trials):
 						ax[0,t].imshow(stim_in[:,t,:].T, aspect='auto')
-						ax[1,t].imshow(recon[25][t,:,:], aspect='auto', clim=[0,recon[25][t,:,:].max()])
-						ax[2,t].imshow(recon[50][t,:,:], aspect='auto', clim=[0,recon[50][t,:,:].max()])
-						ax[3,t].imshow(recon[-1][t,:,:], aspect='auto', clim=[0,recon[-1][t,:,:].max()])
+						ax[1,t].imshow(recon_output[25][t,:,:], aspect='auto', clim=[0,recon_output[25][t,:,:].max()])
+						ax[2,t].imshow(recon_output[50][t,:,:], aspect='auto', clim=[0,recon_output[50][t,:,:].max()])
+						ax[3,t].imshow(recon_output[-1][t,:,:], aspect='auto', clim=[0,recon_output[-1][t,:,:].max()])
 						ax[4,t].imshow(y_hat[:,t,:].T, aspect='auto')
 						ax[5,t].imshow(output[:,t,:].T, aspect='auto')
 
@@ -535,15 +554,14 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 				elif par['recon_target'] == 'hidden':
 					output = np.stack(output, axis=0)
 					hidden = np.stack(h, axis=0)
-					recon  = np.stack(recon, axis=0)
 					trials = 5
 					fig, ax = plt.subplots(5,trials,figsize=(12,12))
 					for t in range(trials):
 						ax[0,t].imshow(stim_in[:,t,:].T, aspect='auto')
 						ax[1,t].imshow(y_hat[:,t,:].T, aspect='auto')
 						ax[2,t].imshow(output[:,t,:].T, aspect='auto')
-						ax[3,t].imshow(hidden[:,t,:].T, aspect='auto')
-						ax[4,t].imshow(recon[:,t,:].T, aspect='auto')
+						ax[3,t].imshow(recon_target[:,t,:].T, aspect='auto')
+						ax[4,t].imshow(recon_output[:,t,:].T, aspect='auto')
 
 						ax[0,t].set_title('Trial {}'.format(t))
 						for p in range(5):
@@ -553,8 +571,8 @@ def supervised_learning(save_fn='test.pkl', gpu_id=None):
 					ax[0,0].set_ylabel('Stim In')
 					ax[1,0].set_ylabel('Target')
 					ax[2,0].set_ylabel('Output')
-					ax[3,0].set_ylabel('Hidden State')
-					ax[4,0].set_ylabel('Hidden Recon')
+					ax[3,0].set_ylabel('Hidden States')
+					ax[4,0].set_ylabel('Hidden Recons')
 					ax[4,0].set_xlabel('Time')
 
 					fig.suptitle('Task {} : Testing {}'.format(task, task_prime))
