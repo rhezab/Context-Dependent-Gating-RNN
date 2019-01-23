@@ -40,11 +40,6 @@ def LSTM_SL_XdG_pLIN():
     print('Running {}'.format(save_fn))
     try_model(save_fn)
 
-
-
-# With ReLu
-
-
 def LSTM_SL_Vanilla_pLIN():
 
     update_parameters({
