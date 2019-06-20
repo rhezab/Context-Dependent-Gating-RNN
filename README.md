@@ -1,5 +1,7 @@
 # Context-Dependent Gating for RNNs
 
+Fork to try to do this without task identity information.
+
 This code accompanies our paper:
 > Alleviating catastrophic forgetting using context-dependent gating and synaptic stabilization  
 > Nicolas Y. Masse, Gregory D. Grant, David J. Freedman  
